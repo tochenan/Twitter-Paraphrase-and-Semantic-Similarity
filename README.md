@@ -9,6 +9,7 @@ Large language models like BERT and GPT have millions of parameters and possess 
 I first tokenize my training dataset, split it into training and validation dataset and store it in a format understandable by PyTorch. Then, I use the training dataset to fine-tune BERT. During this fine-tuning process, I also conduct a hyperparameter search to optimize hyperparameters such as learning rate, batch size, and the number of training epochs. After obtaining the best-performing model, I use it to generate predictions for the test dataset.
 
 model link: https://drive.google.com/drive/folders/1W9iJPkYgovqZT76XJtRm5Z6QYgm5EqOQ?usp=sharing
+code: scripts/BERT_Finetune.ipynb (use in google colab)
 
 
 ## Exercise 2
@@ -26,6 +27,7 @@ As time is scarce for this task, instead of fine-tuning a large model and trying
 5. POS Tags Similarity: This evaluates the grammatical structure similarity of the sentence pairs. Paraphrased sentences are more likely to have similar grammatical structures.
 
 model link: model/best_svc_model_C_0.01.pkl
+code: scripts/feature_engineering_svm.py
 
 ## Evaluation statistics
 
@@ -52,10 +54,10 @@ Given enough time and resources (and perhaps more MLE resources), there are seve
 
 5. Explore and compare BERT model fine-tuned using different regularizer and training methods. 
 
-i. Adopt contrastive learning in the fine-tuning process 
+**i. Adopt contrastive learning in the fine-tuning process **
 e.g. use a contrastive loss function.  This can be incorporated using a siamese network that  generate embeddings for pairs of inputs (in this case the sentence pair). By using a contrastive loss function, the network can learn to produce similar embeddings for similar inputs and dissimilar embeddings for dissimilar inputs which would enhance the contrast of positive labelled class and negative labeled class.
 
-ii. Utilize better regularization method 
+**ii. Utilize better regularization method **
 
 Fine-tuning large models on limited datasets can lead to overfitting, causing the model to learn more about noise rather than the underlying patterns of the data. One regularization method that can be implemented is described in this paper: https://paperswithcode.com/paper/smart-robust-and-efficient-fine-tuning-for. which has performed exceptionally well on  Paraphrase Identification on Quora Question Pairs.
 
