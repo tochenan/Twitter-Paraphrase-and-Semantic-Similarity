@@ -1,6 +1,9 @@
+# Grasp Hometask Mingran
+
+## Preprocessing
 Before proceeding with the training process, I first examined and preprocessed the training dataset. I removed the data points where labels were not present and identified that there were twice as many false labels as true labels, which requires me to balance the class weights during training.
 
-Exercise1
+##Exercise1
 Large language models like BERT and GPT have millions of parameters and possess an intrinsic representation of language structure. Thus, I decided to utilize transfer learning and use a pre-trained large language model like BERT to solve this task. This approach in the past has been illustrated to achieve state-of-the-art performance in many popular NLP benchmarks
 
 I first tokenize my training dataset, split it into training and validation dataset and store it in a format understandable by PyTorch. Then, I use the training dataset to fine-tune BERT. During this fine-tuning process, I also conduct a hyperparameter search to optimize hyperparameters such as learning rate, batch size, and the number of training epochs. After obtaining the best-performing model, I use it to generate predictions for the test dataset.
@@ -8,8 +11,8 @@ I first tokenize my training dataset, split it into training and validation data
 model link: https://drive.google.com/drive/folders/1W9iJPkYgovqZT76XJtRm5Z6QYgm5EqOQ?usp=sharing
 
 
-Exercise 2
-(A) & Exercise 3
+##Exercise 2
+###(A) & Exercise 3
 As time is scarce for this task, instead of fine-tuning a large model and trying out some advanced architectures, I used a linear SVM with regularization on extracted language-relevant features from the sentence pairs. The extracted language-relevant features are:
 
 1. Cosine Similarity using TF-IDF: TF-IDF represents the importance of words by adjusting their count in the sentence by the inverse of their frequency in the corpus. This gives more weight to rarer words in the sentence. Computing similarity using TF-IDF reflects word-level similarities between the two sentences.
@@ -24,7 +27,7 @@ As time is scarce for this task, instead of fine-tuning a large model and trying
 
 model link: model/best_svc_model_C_0.01.pkl
 
-Evaluation statistics
+##Evaluation statistics
 
 Model |     Code|         F |      P |        R | P Correlation | MaxF1 | P MaxF1 | R MaxF1
 ---------|-----------|--------- |---------|---------|-------------------|-----------|--------------|------------
@@ -36,7 +39,7 @@ Overall, both models show comparable prediction performance in terms of F1 score
 For both models, recall is lower than precision, which indicates that the models have a high number of false negatives. To improve the precision-recall balance, a lower decision threshold can be implemented to define what is positive. This issue is likely due to the fact that there are fewer examples of the positive class in the training dataset, which may not fully represent the feature statistics of the true positive class, leading to lower recall.
 
 
-(B)
+###(B)
 Given enough time and resources (and perhaps more MLE resources), there are several improvements that can be made to the models in Exercise 1:
 
 1. Use domain-specific stop words and custom tokenization, such as using trend names as stop words.
