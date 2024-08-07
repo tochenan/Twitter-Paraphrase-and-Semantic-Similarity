@@ -55,6 +55,7 @@ Given enough time and resources (and perhaps more MLE resources), there are seve
 5. Explore and compare BERT model fine-tuned using different regularizer and training methods. 
 
 **i. Adopt contrastive learning in the fine-tuning process **
+
 e.g. use a contrastive loss function.  This can be incorporated using a siamese network that  generate embeddings for pairs of inputs (in this case the sentence pair). By using a contrastive loss function, the network can learn to produce similar embeddings for similar inputs and dissimilar embeddings for dissimilar inputs which would enhance the contrast of positive labelled class and negative labeled class.
 
 **ii. Utilize better regularization method **
