@@ -18,21 +18,26 @@
 #
 
 from __future__ import division
-import sys
+import logging
 import re
 import math
+from typing import List, Optional
 from os import listdir
 from os.path import isfile, join
-from pit2015_checkformat import CheckFileFormat
+from .pit2015_checkformat import CheckFileFormat
+from ..paths import SYSTEMOUTPUTS_DIR, TEST_LABEL_PATH
 
 
 
-def average(x):
+logger = logging.getLogger(__name__)
+
+
+def average(x: List[float]) -> float:
     assert len(x) > 0
     return float(sum(x)) / len(x)
 
-def pearson(x, y):
-    print(len(x), len(y))
+def pearson(x: List[float], y: List[float]) -> float:
+    logger.info("%s %s", len(x), len(y))
     assert len(x) == len(y)
     n = len(x)
     assert n > 0
@@ -53,7 +58,7 @@ def pearson(x, y):
     
     return diffprod / math.sqrt(xdiff2 * ydiff2)
 
-def EvalSingleSystem(testlabelfile, outputfile):
+def EvalSingleSystem(testlabelfile: str, outputfile: str) -> str:
 
     # read in golden labels
     goldlabels = []
@@ -181,26 +186,30 @@ def EvalSingleSystem(testlabelfile, outputfile):
     return evalresult
     
 
-def PITEval(labelfile, outfile):
+def PITEval(labelfile: str, outfile: str) -> Optional[str]:
     if CheckFileFormat(labelfile, outfile):
         return EvalSingleSystem(labelfile, outfile)
     else:
-        print("System output file format error: " + outputfile)
+        logger.info("System output file format error: %s", outfile)
 
     return
 
 # Evaluate all system outputs 
 #
-if __name__ == "__main__":
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    mypath = str(SYSTEMOUTPUTS_DIR)
+    testlabelfile = str(TEST_LABEL_PATH)
+    onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+    logger.info(onlyfiles)
+    for filename in onlyfiles:
+        if re.match(r".*\.output$", filename):
+            outputfile = mypath + "/" + filename
+            logger.info(PITEval(testlabelfile, outputfile))
 
-	mypath = "./systemoutputs/"
-	testlabelfile = "./data/test.label"
-	onlyfiles = [ f for f in listdir(mypath) if isfile(join(mypath,f)) ]
-print(onlyfiles)
-for filename in onlyfiles:
-    if re.match(r".*\.output$", filename):
-        outputfile = mypath + "/" + filename
-        print(PITEval(testlabelfile, outputfile))
+
+if __name__ == "__main__":
+    main()
 
 # # Evaluate a single system output
 # if __name__ == "__main__":

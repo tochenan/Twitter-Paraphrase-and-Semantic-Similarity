@@ -18,14 +18,15 @@
 
 from __future__ import division
 
+import logging
 import os
 import sys
-import random
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
 import nltk
 # nltk.download('punkt')
 from nltk.tokenize import word_tokenize
-from nltk.classify import MaxentClassifier
 from nltk.stem import porter
 from nltk.classify import megam
 
@@ -34,12 +35,16 @@ from _pickle import dump
 
 from collections import *
 
+from ..paths import MODEL_DIR, SYSTEMOUTPUTS_DIR, TEST_DATA_PATH, TRAIN_DATA_PATH
 
-MEGAM_DIR = os.getenv('MEGAM_DIR')
+
+logger = logging.getLogger(__name__)
+
+MEGAM_DIR = os.getenv("MEGAM_DIR")
 megam.config_megam(bin=MEGAM_DIR)
 
 # sub-functions for find overlapping n-grams
-def intersect_modified (list1, list2) :
+def intersect_modified(list1: List[str], list2: List[str]) -> List[str]:
     cnt1 = Counter()
     cnt2 = Counter()
     for tk1 in list1:
@@ -53,7 +58,7 @@ def intersect_modified (list1, list2) :
         largeinter[element] = union[element]
     return list(largeinter.elements())
 
-def intersect (list1, list2) :
+def intersect(list1: List[str], list2: List[str]) -> List[str]:
     cnt1 = Counter()
     cnt2 = Counter()
     for tk1 in list1:
@@ -67,7 +72,8 @@ def intersect (list1, list2) :
 
     
 # create n-gram features and stemmed n-gram features
-def paraphrase_Das_features(source, target, trend):
+def paraphrase_das_features(source: str, target: str, trend: str) -> Dict[str, float]:
+    """Compute n-gram overlap features for a sentence pair."""
     source_words = word_tokenize(source)
     target_words = word_tokenize(target)
 	
@@ -180,14 +186,15 @@ def paraphrase_Das_features(source, target, trend):
 
 
 # read from train/test data files and create features
-def readInData(filename):
+def read_in_data(filename: Path) -> Tuple[List[Tuple[Dict[str, float], Optional[bool], str, str, str]], Set[str]]:
+    """Read data and build feature dicts with optional labels."""
 
     data = []
     trends = set([])
     
     (trendid, trendname, origsent, candsent, judge, origsenttag, candsenttag) = (None, None, None, None, None, None, None)
     
-    for line in open(filename):
+    for line in filename.open():
         line = line.strip()
         #read in training or dev data with labels
         if len(line.split('\t')) == 7:
@@ -202,7 +209,7 @@ def readInData(filename):
         #    continue
         
         trends.add(trendid)
-        features = paraphrase_Das_features(origsent, candsent, trendname)
+        features = paraphrase_das_features(origsent, candsent, trendname)
         
         if judge == None:
             data.append((features, judge, origsent, candsent, trendid))
@@ -235,7 +242,8 @@ def readInData(filename):
     
 # Evaluation by Precision/Recall/F-measure
 # cut-off at probability 0.5, estimated by the model
-def OneEvaluation():
+def evaluate_once() -> None:
+    """Train and evaluate using a fixed 0.5 cutoff."""
             
 
     tp = 0.0
@@ -245,14 +253,14 @@ def OneEvaluation():
     
 
     # read in training/test data with labels and create features
-    trainfull, traintrends  = readInData(trainfilename)    
-    testfull, testtrends  = readInData(testfilename)
+    trainfull, traintrends = read_in_data(trainfilename)
+    testfull, testtrends = read_in_data(testfilename)
     
     train = [(x[0], x[1]) for x in trainfull]
     test  = [(x[0], x[1]) for x in testfull]
     
-    print ("Read in" , len(train) , "valid training data ... ") 
-    print ("Read in" , len(test) , "valid test data ...  ")
+    logger.info("Read in %s valid training data ...", len(train))
+    logger.info("Read in %s valid test data ...", len(test))
     # print 
     if len(test) <=0 or len(train) <=0 :
         sys.exit()
@@ -263,14 +271,14 @@ def OneEvaluation():
     
     # uncomment the following lines if you want to save the trained model into a file
     
-    modelfile = './baseline_logisticregression.model'
+    modelfile = MODEL_DIR / "baseline_logisticregression.model"
     outmodel = open(modelfile, 'wb')
     dump(classifier, outmodel)
     outmodel.close()
     
     # uncomment the following lines if you want to load a trained model from a file
     
-    inmodel = open(modelfile, 'rb') 
+    inmodel = open(modelfile, 'rb')
     classifier = load(inmodel)
     inmodel.close()
     
@@ -291,36 +299,35 @@ def OneEvaluation():
             tn += 1.0  			
 
         if guess == True:
-             print("GOLD-" + str(label) + "\t" + "SYS-" + str(guess) + "\t" + sent1 + "\t" + sent2)
+            logger.info("GOLD-%s\tSYS-%s\t%s\t%s", label, guess, sent1, sent2)
 
     P = tp / (tp + fp)
     R = tp / (tp + fn)
     F = 2 * P * R / (P + R)
   
-    print("PRECISION: %s, RECALL: %s, F1: %s" % (P,R,F))
- 
-    print("ACCURACY: ", nltk.classify.accuracy(classifier, test))
-
-    print("# true pos:", tp)
-    print("# false pos:", fp)
-    print("# false neg:", fn )
-    print("# true neg:", tn    )
+    logger.info("PRECISION: %s, RECALL: %s, F1: %s", P, R, F)
+    logger.info("ACCURACY: %s", nltk.classify.accuracy(classifier, test))
+    logger.info("# true pos: %s", tp)
+    logger.info("# false pos: %s", fp)
+    logger.info("# false neg: %s", fn)
+    logger.info("# true neg: %s", tn)
 
 
 
 # Evaluation by precision/recall curve
-def PREvaluation():
+def evaluate_pr_curve() -> None:
+    """Train and report precision-recall curve metrics."""
     
     # read in training/test data with labels and create features
-    trainfull, traintrends  = readInData(trainfilename)    
-    testfull, testtrends  = readInData(testfilename)
+    trainfull, traintrends = read_in_data(trainfilename)
+    testfull, testtrends = read_in_data(testfilename)
     
     
     train = [(x[0], x[1]) for x in trainfull]
     test  = [(x[0], x[1]) for x in testfull]
     
-    print("Read in" , len(train) , "valid training data ... " )
-    print("Read in" , len(test) , "valid test data ...  ")
+    logger.info("Read in %s valid training data ...", len(train))
+    logger.info("Read in %s valid test data ...", len(test))
     # print
     if len(test) <=0 or len(train) <=0 :
         sys.exit()
@@ -330,14 +337,14 @@ def PREvaluation():
     
     # comment the following lines to skip saving the above trained model into a file
     
-    modelfile = './baseline_logisticregression.model'
+    modelfile = MODEL_DIR / "baseline_logisticregression.model"
     outmodel = open(modelfile, 'wb')
     dump(classifier, outmodel)
     outmodel.close()
     
     # comment the following lines to skip loading a previously trained model from a file
     
-    inmodel = open(modelfile, 'rb') 
+    inmodel = open(modelfile, 'rb')
     classifier = load(inmodel)
     inmodel.close()
             
@@ -358,7 +365,7 @@ def PREvaluation():
     truepos = 0
     falsepos = 0
     
-    print("\t\tPREC\tRECALL\tF1\t|||\tMaxEnt\tSENT1\tSENT2")
+    logger.info("\t\tPREC\tRECALL\tF1\t|||\tMaxEnt\tSENT1\tSENT2")
     
     i = 0
     for sortedi in sortedindex:
@@ -380,19 +387,27 @@ def PREvaluation():
             f1 = 2 * precision * recall / (precision + recall)
         
         
-        print(str(i) + "\t" + strhit + "\t" + "{0:.3f}".format(precision) + '\t' + "{0:.3f}".format(recall) + "\t" + "{0:.3f}".format(f1),)
-        print("\t|||\t" + "{0:.3f}".format(probs[sortedi]) + "\t" + sent1 + "\t" + sent2)
+        logger.info(
+            "%s\t%s\t%s\t%s\t%s",
+            i,
+            strhit,
+            "{0:.3f}".format(precision),
+            "{0:.3f}".format(recall),
+            "{0:.3f}".format(f1),
+        )
+        logger.info("\t|||\t%s\t%s\t%s", "{0:.3f}".format(probs[sortedi]), sent1, sent2)
 
 
 # Load the trained model and output the predictions
-def OutputPredictions(modelfile, outfile):
+def output_predictions(modelfile: Path, outfile: Path) -> None:
+    """Write predictions to SemEval output format using a trained model."""
     
     # read in test data and create features
-    testfull, testtrends  = readInData(testfilename)
+    testfull, testtrends = read_in_data(testfilename)
     
     test  = [(x[0], x[1]) for x in testfull]
     
-    print("Read in" , len(test) , "valid test data ...  ")
+    logger.info("Read in %s valid test data ...", len(test))
     # print
     if len(test) <=0:
         sys.exit()
@@ -403,29 +418,27 @@ def OutputPredictions(modelfile, outfile):
     inmodel.close()
            
     # output the results into a file
-    outf = open(outfile,'w') 
-          
-    for i, t in enumerate(test):
-        prob = classifier.prob_classify(t[0]).prob(True)
-        if prob >= 0.5:
-             outf.write("true\t" + "{0:.4f}".format(prob) + "\n")
-        else:
-             outf.write("false\t" + "{0:.4f}".format(prob) + "\n")
-             
-    outf.close()
+    with open(outfile, "w") as outf:
+        for i, t in enumerate(test):
+            prob = classifier.prob_classify(t[0]).prob(True)
+            if prob >= 0.5:
+                outf.write("true\t" + "{0:.4f}".format(prob) + "\n")
+            else:
+                outf.write("false\t" + "{0:.4f}".format(prob) + "\n")
              
 if __name__ == "__main__":
-    trainfilename = "../data/train.data"
-    testfilename  = "../data/test.data"
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    trainfilename = TRAIN_DATA_PATH
+    testfilename = TEST_DATA_PATH
     
     # Training and Testing by precision/recall curve
-    #PREvaluation()
+    # evaluate_pr_curve()
     
     # Training and Testing by Precision/Recall/F-measure
-    OneEvaluation()
+    evaluate_once()
     
     # write results into a file in the SemEval output format
-    outputfilename = "../systemoutputs/PIT2015_BASELINE_02_LG.output"
-    modelfilename = './baseline_logisticregression.model'
-    OutputPredictions(modelfilename, outputfilename)
+    outputfilename = SYSTEMOUTPUTS_DIR / "PIT2015_BASELINE_02_LG.output"
+    modelfilename = MODEL_DIR / "baseline_logisticregression.model"
+    output_predictions(modelfilename, outputfilename)
    
