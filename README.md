@@ -1,4 +1,4 @@
-# Protein Developability Prediction
+# Twitter Paraphrase and Semantic Similarity
 
 This repository contains baseline and feature-based models for the SemEval-2015 Task 1 paraphrase/similarity task, along with evaluation scripts and saved outputs.
 
